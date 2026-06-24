@@ -1,0 +1,91 @@
+name: build
+
+on:
+  push:
+    branches:
+      - local
+env:
+  IS_STABLE: ${{ !contains(github.ref, '-') }}
+  FLUTTER_VERSION: '3.44.4'
+
+jobs:
+  build:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        include:
+          - platform: android
+            os: ubuntu-latest
+
+    steps:
+      - name: Setup rust
+        if: startsWith(matrix.os, 'windows-11-arm')
+        shell: pwsh
+        run: |
+          Invoke-WebRequest -Uri "https://win.rustup.rs/aarch64" -OutFile rustup-init.exe
+          .\rustup-init.exe -y --default-toolchain stable
+          $cargoPath = "$env:USERPROFILE\.cargo\bin"
+          Add-Content $env:GITHUB_PATH $cargoPath
+
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Setup Android Signing
+        if: startsWith(matrix.platform,'android')
+        run: |
+          echo "${{ secrets.KEYSTORE }}" | base64 --decode > android/app/keystore.jks
+          echo "${{ secrets.SERVICE_JSON }}" | base64 --decode > android/app/google-services.json
+          {
+            echo "keyAlias=${{ secrets.KEY_ALIAS }}"
+            echo "storePassword=${{ secrets.STORE_PASSWORD }}"
+            echo "keyPassword=${{ secrets.KEY_PASSWORD }}"
+          } >> android/local.properties
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.26.4'
+          cache-dependency-path: |
+            core/go.sum
+
+      - name: Enable git long paths (Windows)
+        if: startsWith(matrix.os, 'windows')
+        run: git config --global core.longpaths true
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: master
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          cache: true
+
+      - name: Setup Xcode
+        if: startsWith(matrix.platform,'macos')
+        run: |
+          sudo xcode-select -s /Applications/Xcode_26.3.app || sudo xcode-select -s /Applications/Xcode_26.2.app
+          xcodebuild -version
+
+      - name: Setup NDK
+        if: startsWith(matrix.platform,'android')
+        uses: nttld/setup-ndk@v1
+        with:
+          ndk-version: r28c
+          add-to-path: true
+          link-to-sdk: true
+
+      - name: Get Flutter Dependency
+        run: |
+          flutter --version
+          flutter pub get
+
+      - name: Setup
+        run: dart setup.dart ${{ matrix.platform }} ${{ env.IS_STABLE == 'true' && '--env stable' || '' }} -v
+
+      - name: Upload
+        uses: actions/upload-artifact@v4
+        with:
+          name: artifact-${{ matrix.platform }}${{ matrix.arch && format('-{0}', matrix.arch) }}
+          path: ./dist
+          overwrite: true

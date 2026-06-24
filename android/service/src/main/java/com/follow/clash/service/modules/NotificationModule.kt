@@ -14,6 +14,7 @@ import com.follow.clash.common.QuickAction
 import com.follow.clash.common.quickIntent
 import com.follow.clash.common.receiveBroadcastFlow
 import com.follow.clash.common.startForeground
+import com.follow.clash.common.R as CommonR
 import com.follow.clash.common.toPendingIntent
 import com.follow.clash.core.Core
 import com.follow.clash.service.R
@@ -87,7 +88,7 @@ internal class NotificationModule(
             GlobalState.NOTIFICATION_CHANNEL,
         ).apply {
             setSmallIcon(R.drawable.ic_service)
-            setContentTitle("FlClash")
+            setContentTitle(service.getString(CommonR.string.app_name))
             setContentIntent(intent.toPendingIntent)
             setPriority(NotificationCompat.PRIORITY_LOW)
             setCategory(NotificationCompat.CATEGORY_SERVICE)

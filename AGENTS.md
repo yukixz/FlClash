@@ -10,6 +10,7 @@ Read these files before making changes:
 - [.agents/project.md](.agents/project.md): project overview, versions, and build dependencies.
 - [.agents/commands.md](.agents/commands.md): build, development, code generation, and test commands.
 - [.agents/rules.md](.agents/rules.md): lint, testing, generated-code, and workflow rules.
+- [.agents/local.md](.agents/local.md): fork goals and customization policy for the `local` branch.
 
 Read these only when the task touches their area:
 
